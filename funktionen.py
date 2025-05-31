@@ -165,9 +165,30 @@ FROM kunden INNER JOIN ort on ort.ID_Ort = kunden.OrtID
 INNER JOIN anrede on anrede.ID_Anrede = kunden.Anrede
 WHERE kunden.Email = ?""",(email,))
         row = cur.fetchone()
-        adresse = Kunden(*row)
-        ttk.Button(self.frame, text="Adressdaten anzeigen", command=lambda: kundenmenu.kunden_verwalten(adresse,cur,conn)).pack(pady=30,padx=20)
-        ttk.Button(self.frame, text="Ausloggen", command=lambda: self.logout(parent)).pack(pady=40,padx=20)
+
+        if not row:
+            # Leere Werte übergeben, wenn kein Kunde gefunden wurde
+            adresse = Kunden(
+                "",  # IDKunde
+                "",  # Anrede
+                "",  # Vorname
+                "",  # Name
+                "",  # Straße
+                "",  # Hausnummer
+                "",  # Ort
+                "",  # PLZ
+                "",  # Telefon
+                "",  # Geburtsdatum
+                "",  # Email
+                ""   # Titel
+            )
+        else:
+            # Daten vorhanden → Kundenobjekt erstellen
+            adresse = Kunden(*row)
+
+        # Buttons anzeigen wie gehabt
+        ttk.Button(self.frame, text="Adressdaten anzeigen", command=lambda: kundenmenu.kunden_verwalten(adresse, cur, conn)).pack(pady=30, padx=20)
+        ttk.Button(self.frame, text="Ausloggen", command=lambda: self.logout(parent)).pack(pady=40, padx=20)
 
 
     

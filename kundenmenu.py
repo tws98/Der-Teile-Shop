@@ -17,10 +17,40 @@ class Kunden:
         self.email = email
         self.titel = titel
 
-# Funktion zum Erstellen der GUI und Speichern der Änderungen
+# Funktion zum Verwalten des Kunden
 def kunden_verwalten(kunde, cur, conn):
-    # Funktion zum Speichern der Änderungen
-    def speichern(cur, conn):
+    def daten_pruefen():
+        # Werte aus der GUI holen
+        anrede = entry_anrede.get()
+        vorname = entry_vorname.get()
+        name = entry_name.get()
+        strasse = entry_strasse.get()
+        hausnummer = entry_hausnummer.get()
+        ort = entry_ort.get()
+        plz = entry_plz.get()
+        telefon = entry_telefon.get()
+        geburtsdatum = entry_geburtsdatum.get()
+        email = entry_email.get()
+        titel = entry_titel.get()
+
+        if not email:
+            messagebox.showwarning("Hinweis", "Es wurde keine E-Mail-Adresse angegeben.")
+        else:
+            cur.execute("""SELECT kunden.IDKunde, anrede.Anrede, Vorname, Name, Straße, Hausnummer, ort.Ort, ort.PLZ, Telefon, Geburtsdatum, Email, Titel
+FROM kunden INNER JOIN ort on ort.ID_Ort = kunden.OrtID
+INNER JOIN anrede on anrede.ID_Anrede = kunden.Anrede
+WHERE kunden.Vorname = ? AND kunden.Name = ? AND Straße = ? AND Hausnummer = ? AND PLZ = ? AND Ort = ?""",(vorname, name ,strasse, hausnummer, plz, ort))
+            row = cur.fetchone()
+
+            if row:
+                kunde.IDKunde = row[0]
+                messagebox.showinfo("Hinweis", "Ein Kunde mit diesen Adressdaten existiert bereits – aber ohne E-Mail.")
+        
+            else:
+                kunde.IDKunde = None
+                messagebox.showinfo("Keine Dublette", "Diese Kundendaten sind neu und können gespeichert werden.")
+
+    def speichern():
         kunde.anrede = entry_anrede.get()
         kunde.vorname = entry_vorname.get()
         kunde.name = entry_name.get()
@@ -32,152 +62,94 @@ def kunden_verwalten(kunde, cur, conn):
         kunde.geburtsdatum = entry_geburtsdatum.get()
         kunde.email = entry_email.get()
         kunde.titel = entry_titel.get()
-        
-        # Anzeigen der gespeicherten Daten im Label
+
+        # Ergebnis anzeigen
         label_result.config(text=f"{kunde.titel} {kunde.anrede} {kunde.vorname} {kunde.name}\n"
                                  f"{kunde.strasse} {kunde.hausnummer}, {kunde.PLZ} {kunde.ort}\n"
                                  f"Telefon: {kunde.telefon}, Geburtsdatum: {kunde.geburtsdatum}\n"
                                  f"E-Mail: {kunde.email}")
-        
-
-        #Für die neu gespeicherten Daten die Primary Keys holen
         try:
             # OrtID holen
             cur.execute("SELECT ID_Ort FROM ort WHERE Ort = ? AND PLZ = ?", (kunde.ort, kunde.PLZ))
             row = cur.fetchone()
-            if row:
-                ortid = row[0]
-
-            else:
-                None
+            ortid = row[0] if row else None
 
             # AnredeID holen
             cur.execute("SELECT ID_Anrede FROM anrede WHERE Anrede = ?", (kunde.anrede,))
             row = cur.fetchone()
-            if row:
-                anredeid = row[0] 
-                
-            else:
-                None
+            anredeid = row[0] if row else None
 
             if ortid is None or anredeid is None:
                 messagebox.showerror("Fehler", "Ungültige Anrede oder Ort/PLZ")
                 return
 
-            # UPDATE-Statement
-            sql = """
-                UPDATE `kunden`
-                SET `Anrede` = ?,
-                    `Vorname` = ?,
-                    `Name` = ?,
-                    `Straße` = ?,
-                    `Hausnummer` = ?,
-                    `OrtID` = ?,
-                    `Telefon` = ?,
-                    `Email` = ?
-                WHERE `IDKunde` = ?;
+            
+            if kunde.IDKunde:  # UPDATE für vorhandene Kunden
+                sql = """
+                UPDATE kunden
+                SET Anrede = ?, Vorname = ?, Name = ?, Straße = ?, Hausnummer = ?, OrtID = ?, 
+                    Telefon = ?, Geburtsdatum = ?, Email = ?, Titel = ?
+                WHERE IDKunde = ?;
             """
+                werte = (
+                anredeid, kunde.vorname, kunde.name, kunde.strasse, kunde.hausnummer,
+                ortid, kunde.telefon, kunde.geburtsdatum, kunde.email, kunde.titel, kunde.IDKunde
+                )
+                cur.execute(sql, werte)
 
-            werte = (
-                anredeid,
-                kunde.vorname,
-                kunde.name,
-                kunde.strasse,
-                kunde.hausnummer,
-                ortid,
-                kunde.telefon,
-                kunde.email,
-                kunde.IDKunde
-            )
+            else:  # INSERT für neue Kunden
+                sql = """
+                INSERT INTO kunden (Anrede, Vorname, Name, Straße, Hausnummer, OrtID, Telefon, 
+                                    Geburtsdatum, Email, Titel)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """
+                werte = (
+                anredeid, kunde.vorname, kunde.name, kunde.strasse, kunde.hausnummer,
+                ortid, kunde.telefon, kunde.geburtsdatum, kunde.email, kunde.titel
+                )
+                cur.execute(sql, werte)
 
-            cur.execute(sql, werte)
             conn.commit()
-            messagebox.showinfo("Erfolg", "Änderungen gespeichert")
+            messagebox.showinfo("Erfolg", "Änderungen wurden erfolgreich gespeichert.")
             root.destroy()
 
         except Exception as e:
             messagebox.showerror("Fehler beim Speichern", f"Ein Fehler ist aufgetreten:\n{str(e)}")
-
+    
+    
     # GUI erstellen
     root = tk.Tk()
     root.title("Kundenverwaltung")
 
-    # Labels und Eingabefelder
-    label_anrede = ttk.Label(root, text="Anrede:")
-    label_anrede.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-    entry_anrede = ttk.Entry(root)
-    entry_anrede.grid(row=0, column=1, padx=10, pady=5)
-    entry_anrede.insert(0, kunde.anrede)
+    # Eingabefelder
+    labels = ["Anrede", "Vorname", "Nachname", "Straße", "Hausnummer", "Ort", "PLZ", "Telefon", "Geburtsdatum", "E-Mail", "Titel"]
+    eintraege = []
+    daten = [kunde.anrede, kunde.vorname, kunde.name, kunde.strasse, kunde.hausnummer,
+             kunde.ort, kunde.PLZ, kunde.telefon, kunde.geburtsdatum, kunde.email, kunde.titel]
 
-    label_vorname = ttk.Label(root, text="Vorname:")
-    label_vorname.grid(row=1, column=0, padx=10, pady=5, sticky="e")
-    entry_vorname = ttk.Entry(root)
-    entry_vorname.grid(row=1, column=1, padx=10, pady=5)
-    entry_vorname.insert(0, kunde.vorname)
+    for i, (label, wert) in enumerate(zip(labels, daten)):
+        ttk.Label(root, text=label + ":").grid(row=i, column=0, padx=10, pady=5, sticky="e")
+        entry = ttk.Entry(root)
+        entry.grid(row=i, column=1, padx=10, pady=5)
+        entry.insert(0, wert)
+        eintraege.append(entry)
 
-    label_name = ttk.Label(root, text="Nachname:")
-    label_name.grid(row=2, column=0, padx=10, pady=5, sticky="e")
-    entry_name = ttk.Entry(root)
-    entry_name.grid(row=2, column=1, padx=10, pady=5)
-    entry_name.insert(0, kunde.name)
+    # Einzelfelder den Variablen zuweisen
+    (entry_anrede, entry_vorname, entry_name, entry_strasse, entry_hausnummer,
+     entry_ort, entry_plz, entry_telefon, entry_geburtsdatum, entry_email, entry_titel) = eintraege
 
-    label_strasse = ttk.Label(root, text="Straße:")
-    label_strasse.grid(row=3, column=0, padx=10, pady=5, sticky="e")
-    entry_strasse = ttk.Entry(root)
-    entry_strasse.grid(row=3, column=1, padx=10, pady=5)
-    entry_strasse.insert(0, kunde.strasse)
+    # Prüfen-Button (nur wenn keine Kundendaten vorhanden)
+    if not kunde.IDKunde:
+        button_pruefen = ttk.Button(root, text="Daten prüfen", command=daten_pruefen)
+        button_pruefen.grid(row=11, column=0, columnspan=2, pady=5)
 
-    label_hausnummer = ttk.Label(root, text="Hausnummer:")
-    label_hausnummer.grid(row=4, column=0, padx=10, pady=5, sticky="e")
-    entry_hausnummer = ttk.Entry(root)
-    entry_hausnummer.grid(row=4, column=1, padx=10, pady=5)
-    entry_hausnummer.insert(0, kunde.hausnummer)
+    # Speichern-Button
+    button_speichern = ttk.Button(root, text="Änderungen speichern", command=speichern)
+    button_speichern.grid(row=12, column=0, columnspan=2, pady=10)
 
-    label_ort = ttk.Label(root, text="Ort:")
-    label_ort.grid(row=5, column=0, padx=10, pady=5, sticky="e")
-    entry_ort = ttk.Entry(root)
-    entry_ort.grid(row=5, column=1, padx=10, pady=5)
-    entry_ort.insert(0, kunde.ort)
-
-    label_plz = ttk.Label(root, text="PLZ:")
-    label_plz.grid(row=6, column=0, padx=10, pady=5, sticky="e")
-    entry_plz = ttk.Entry(root)
-    entry_plz.grid(row=6, column=1, padx=10, pady=5)
-    entry_plz.insert(0, kunde.PLZ)
-
-    label_telefon = ttk.Label(root, text="Telefon:")
-    label_telefon.grid(row=7, column=0, padx=10, pady=5, sticky="e")
-    entry_telefon = ttk.Entry(root)
-    entry_telefon.grid(row=7, column=1, padx=10, pady=5)
-    entry_telefon.insert(0, kunde.telefon)
-
-    label_geburtsdatum = ttk.Label(root, text="Geburtsdatum:")
-    label_geburtsdatum.grid(row=8, column=0, padx=10, pady=5, sticky="e")
-    entry_geburtsdatum = ttk.Entry(root)
-    entry_geburtsdatum.grid(row=8, column=1, padx=10, pady=5)
-    entry_geburtsdatum.insert(0, kunde.geburtsdatum)
-
-    label_email = ttk.Label(root, text="E-Mail:")
-    label_email.grid(row=9, column=0, padx=10, pady=5, sticky="e")
-    entry_email = ttk.Entry(root)
-    entry_email.grid(row=9, column=1, padx=10, pady=5)
-    entry_email.insert(0, kunde.email)
-
-    label_titel = ttk.Label(root, text="Titel:")
-    label_titel.grid(row=10, column=0, padx=10, pady=5, sticky="e")
-    entry_titel = ttk.Entry(root)
-    entry_titel.grid(row=10, column=1, padx=10, pady=5)
-    entry_titel.insert(0, kunde.titel)
-
-    # Button zum Speichern
-    button_speichern = ttk.Button(root, text="Änderungen speichern", command=lambda: speichern(cur,conn))
-    button_speichern.grid(row=11, column=0, columnspan=2, pady=20)
-
-    # Ergebnisanzeige
+    # Ergebnis-Label
     label_result = ttk.Label(root, text=f"{kunde.titel} {kunde.anrede} {kunde.vorname} {kunde.name}\n"
                                         f"{kunde.strasse} {kunde.hausnummer}, {kunde.PLZ} {kunde.ort}\n"
                                         f"Telefon: {kunde.telefon}, Geburtsdatum: {kunde.geburtsdatum}\n"
                                         f"E-Mail: {kunde.email}")
-    label_result.grid(row=12, column=0, columnspan=2, pady=20)
-
-
+    label_result.grid(row=13, column=0, columnspan=2, pady=20)
