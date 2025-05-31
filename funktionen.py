@@ -5,13 +5,15 @@ import kundenmenu
 import datenbankverbindung
 
 class Kunden():
-    def __init__(self,anrede,vorname,name,strasse,hausnummer,ort,telefon,geburtsdatum,email,titel):
+    def __init__(self,IDKunde, anrede,vorname,name,strasse,hausnummer,ort,PLZ,telefon,geburtsdatum,email,titel):
+        self.IDKunde = IDKunde
         self.anrede = anrede
         self.vorname = vorname
         self.name = name
         self.strasse = strasse
         self.hausnummer = hausnummer
         self.ort = ort
+        self.PLZ = PLZ
         self.telefon = telefon
         self.geburtsdatum = geburtsdatum
         self.email = email
@@ -158,7 +160,7 @@ class Eingabe:
         ttk.Label(self.frame, text="Kundenmenü",font=("Arial", 12, "bold")).pack(pady=10)
        
 
-        cur.execute ("""SELECT anrede.Anrede, Vorname, Name, Straße, Hausnummer, ort.Ort, Telefon, Geburtsdatum, Email, Titel
+        cur.execute ("""SELECT kunden.IDKunde, anrede.Anrede, Vorname, Name, Straße, Hausnummer, ort.Ort, ort.PLZ, Telefon, Geburtsdatum, Email, Titel
 FROM kunden INNER JOIN ort on ort.ID_Ort = kunden.OrtID
 INNER JOIN anrede on anrede.ID_Anrede = kunden.Anrede
 WHERE kunden.Email = ?""",(email,))
