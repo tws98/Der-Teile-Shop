@@ -8,12 +8,15 @@ import sys
 
 class Datenbank ():
     def  __init__(self, parent):
-        self.entry_benutzer = None
-        self.entry_passwort = None
         self.connected = False
         self.parent = parent
         self.frame = ttk.Frame(self.parent)
         self.conn = None
+        self.entry_benutzer = None
+        self.entry_passwort = None
+        self.benutzername = ""
+        self.passwort = ""
+
 
     def datenbankverbindung (self):
         frame = self.frame
@@ -32,20 +35,39 @@ class Datenbank ():
         ttk.Button(frame, text="Registrieren", command=self.datenbank_registrierung).pack(pady=10)
 
 
-    def datenbank_registrierung (self):
-        benutzer = self.entry_benutzer.get()
-        passwort = self.entry_passwort.get()
+    def datenbank_registrierung(self):
+    # Nur wenn self.benutzername und self.passwort leer sind, aus Entry-Feldern lesen
+        if not self.benutzername or not self.passwort:
+            try:
+                benutzer = self.entry_benutzer.get()
+                passwort = self.entry_passwort.get()
+            except Exception as e:
+                messagebox.showerror("Fehler", f"Eintrag nicht verfügbar: {e}")
+                return
 
-        self.try_connect(benutzer, passwort)
+            if not benutzer or not passwort:
+                messagebox.showwarning("Fehler", "Bitte alle Felder ausfüllen.")
+                return
+
+        # Einmalig speichern
+            self.benutzername = benutzer
+            self.passwort = passwort
+
+    # Verbindung aufbauen (egal ob neu oder zurückgekehrt)
+        self.try_connect(self.benutzername, self.passwort)
 
         if self.connected:
             self.frame.destroy()
-            print("Erfolgreich, eingeloggt!")
+            print("Erfolgreich eingeloggt!")
+            
 
-            email = funktionen.Eingabe(self.parent)
-            cur = self.conn.cursor()
-            email.registrierung_ui(cur,self.conn)
-            email.anmeldung_ui(self.parent,cur,self.conn)
+
+        email = funktionen.Eingabe(self.parent)
+        cur = self.conn.cursor()
+        email.registrierung_ui(self.parent, cur, self.conn)
+        email.anmeldung_ui(self.parent, cur, self.conn)
+
+        return self.benutzername, self.passwort
 
 
     
