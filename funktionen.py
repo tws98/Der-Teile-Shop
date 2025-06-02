@@ -62,6 +62,7 @@ class Eingabe:
         self.entry_passwort_wdh.pack(pady=5)
 
         ttk.Button(self.frame, text="Registrieren", command=lambda: self.registrieren(cur,conn)).pack(pady=10)
+        ttk.Button(self.frame, text="Quit", command=self.beenden).pack(pady=10)
 
 
 
@@ -81,6 +82,10 @@ class Eingabe:
         self.login_passwort.pack(pady=5)
 
         ttk.Button(self.frame, text="Anmelden", command=lambda: self.anmelden(cur,conn)).pack(pady=10)
+
+    def beenden(self):
+        self.frame.destroy()
+        self.parent.destroy()
 
 
     def registrieren(self, cur, conn):
@@ -139,7 +144,7 @@ class Eingabe:
 
 
 
-    def hauptmenu_admin (self,parent,cur):
+    def hauptmenu_admin (self,parent,cur,conn):
         #hauptmenü des Inhabers nach der Anmeldung
         self.frame.destroy()
         self.frame = ttk.Frame(parent)
@@ -147,10 +152,10 @@ class Eingabe:
         ttk.Label(self.frame, text="Hauptmenü",font=("Arial", 12, "bold")).pack(pady=10)
 
  
-        ttk.Button(self.frame, text="Kundenübersicht", command=lambda: self.kunden_übersicht(cur)).pack(pady=10,padx=20)
+        ttk.Button(self.frame, text="Kundenübersicht", command=lambda: self.kunden_übersicht(cur,conn)).pack(pady=10,padx=20)
         ttk.Button(self.frame, text="Auftragseingabe", command=self.auftragseingang).pack(pady=15,padx=20)
         ttk.Button(self.frame, text="Lagerverwaltung", command=self.lagerverwaltung).pack(pady=20,padx=20)
-        ttk.Button(self.frame, text="Ausloggen", command=self.logout).pack(pady=25,padx=20)
+        ttk.Button(self.frame, text="Ausloggen", command=lambda: self.logout(conn)).pack(pady=25,padx=20)
 
 
     def kunden_menu(self, parent, email,cur,conn):
@@ -188,20 +193,28 @@ WHERE kunden.Email = ?""",(email,))
 
         # Buttons anzeigen
         ttk.Button(self.frame, text="Adressdaten anzeigen", command=lambda: kundenmenu.kunden_verwalten(adresse, cur, conn)).pack(pady=30, padx=20)
-        ttk.Button(self.frame, text="Ausloggen", command=self.logout).pack(pady=40, padx=20)
+        ttk.Button(self.frame, text="Ausloggen", command=lambda: self.logout(conn)).pack(pady=40, padx=20)
 
 
     
     # einzelne Funktionen für die Hauptmenü buttons
-    def logout(self):
-        self.frame.destroy()
+    # logout Funktion
+    def logout(self,conn):
         self.clear_window(self.parent)
+        self.conn = conn
+
+        if not self.conn:
+            messagebox.showerror("Fehler", "Datenbankverbindung ist nicht mehr aktiv.")
+            return
+
         import datenbankverbindung
         datenbank = datenbankverbindung.Datenbank(self.parent)
-        datenbank.datenbankverbindung()
+        datenbank.conn = self.conn
+        datenbank.connected = True
+        datenbank.zeige_benutzer_login()
 
 
-    def kunden_übersicht(self, cur):
+    def kunden_übersicht(self, cur,conn):
         self.frame.destroy()
         self.frame = ttk.Frame(self.parent)
         self.frame.pack(padx=10, pady=10)
@@ -265,7 +278,7 @@ WHERE kunden.Email = ?""",(email,))
         button_suchen = ttk.Button(such_frame, text="Suchen", command=suche_ausführen)
         button_suchen.pack(side=tk.LEFT, padx=5)
 
-        button_zurueck = ttk.Button(such_frame, text="Zurück", command=lambda: self.hauptmenu_admin(self.parent,cur))
+        button_zurueck = ttk.Button(such_frame, text="Zurück", command=lambda: self.hauptmenu_admin(self.parent,cur,conn))
         button_zurueck.pack(side=tk.LEFT, padx=10)
 
         # Scrollbare Textbox
@@ -293,6 +306,8 @@ WHERE kunden.Email = ?""",(email,))
         # daten aus entrys der GUI holen
         email = self.login_email.get()
         pw = self.login_passwort.get()
+        self.conn = conn
+
 
         if not email or not pw:
             # Überprüfung, dass alle Textboxen ausgefüllt sind
@@ -334,8 +349,9 @@ WHERE kunden.Email = ?""",(email,))
                 row = cur.fetchone()
                 rolle = row[0]
 
+
                 if rolle == "inhaber":
-                    menu.hauptmenu_admin(self.parent,cur)
+                    menu.hauptmenu_admin(self.parent,cur,conn)
 
                 elif rolle == "kunde":
                     menu.kunden_menu(self.parent,email,cur,conn)

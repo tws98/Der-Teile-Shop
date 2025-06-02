@@ -70,6 +70,18 @@ class Datenbank ():
         return self.benutzername, self.passwort
 
     
+    def zeige_benutzer_login(self):
+        if not self.connected:
+            messagebox.showerror("Fehler", "Keine Datenbankverbindung!")
+            return
+
+        import funktionen
+        email_gui = funktionen.Eingabe(self.parent)
+        cur = self.conn.cursor()
+        email_gui.registrierung_ui(self.parent, cur, self.conn)
+        email_gui.anmeldung_ui(self.parent, cur, self.conn)
+
+
     def try_connect(self, benutzer, passwort):
         # try:
         #     self.conn = mariadb.connect(
