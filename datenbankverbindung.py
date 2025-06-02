@@ -69,7 +69,6 @@ class Datenbank ():
 
         return self.benutzername, self.passwort
 
-
     
     def try_connect(self, benutzer, passwort):
         # try:

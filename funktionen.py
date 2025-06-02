@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import bcrypt
 import kundenmenu
-import datenbankverbindung
 
 class Kunden():
     def __init__(self,IDKunde, anrede,vorname,name,strasse,hausnummer,ort,PLZ,telefon,geburtsdatum,email,titel):
@@ -140,21 +139,22 @@ class Eingabe:
 
 
 
-    def hauptmenu_admin (self,parent):
+    def hauptmenu_admin (self,parent,cur):
         #hauptmenü des Inhabers nach der Anmeldung
+        self.frame.destroy()
         self.frame = ttk.Frame(parent)
         self.frame.grid(row=0,column=0,padx=20, pady=20, sticky="n")
         ttk.Label(self.frame, text="Hauptmenü",font=("Arial", 12, "bold")).pack(pady=10)
 
  
-        ttk.Button(self.frame, text="Kundenübersicht", command=self.kunden_übersicht).pack(pady=10,padx=20)
-        ttk.Button(self.frame, text="Auftragseingabe", command=self.auftragseingang).pack(pady=20,padx=20)
-        ttk.Button(self.frame, text="Lagerverwaltung", command=self.lagerverwaltung).pack(pady=30,padx=20)
-        ttk.Button(self.frame, text="Ausloggen", command=self.logout).pack(pady=40,padx=20)
+        ttk.Button(self.frame, text="Kundenübersicht", command=lambda: self.kunden_übersicht(cur)).pack(pady=10,padx=20)
+        ttk.Button(self.frame, text="Auftragseingabe", command=self.auftragseingang).pack(pady=15,padx=20)
+        ttk.Button(self.frame, text="Lagerverwaltung", command=self.lagerverwaltung).pack(pady=20,padx=20)
+        ttk.Button(self.frame, text="Ausloggen", command=self.logout).pack(pady=25,padx=20)
 
 
     def kunden_menu(self, parent, email,cur,conn):
-
+        #hauptmenü für Kunden
         self.frame = ttk.Frame(parent)
         self.frame.grid(row=0,column=0,padx=20, pady=20, sticky="n")
         ttk.Label(self.frame, text="Kundenmenü",font=("Arial", 12, "bold")).pack(pady=10)
@@ -184,25 +184,102 @@ WHERE kunden.Email = ?""",(email,))
             )
         else:
             # Daten vorhanden → Kundenobjekt erstellen
-            adresse = Kunden(*row)
+            adresse = Kunden(*row)# Nimm alle Elemente aus row und übergib sie einzeln als Argumente an die Funktion/Klasse.
 
-        # Buttons anzeigen wie gehabt
+        # Buttons anzeigen
         ttk.Button(self.frame, text="Adressdaten anzeigen", command=lambda: kundenmenu.kunden_verwalten(adresse, cur, conn)).pack(pady=30, padx=20)
-        ttk.Button(self.frame, text="Ausloggen", command=lambda: self.logout(parent)).pack(pady=40, padx=20)
+        ttk.Button(self.frame, text="Ausloggen", command=self.logout).pack(pady=40, padx=20)
 
 
     
     # einzelne Funktionen für die Hauptmenü buttons
-    def logout(self,parent):
+    def logout(self):
         self.frame.destroy()
-        instanz = datenbankverbindung.Datenbank(parent)
-        instanz.datenbankverbindung.Datenbank(self.benutzername,self.passwort)
+        self.clear_window(self.parent)
+        import datenbankverbindung
+        datenbank = datenbankverbindung.Datenbank(self.parent)
+        datenbank.datenbankverbindung()
 
-    def kunden_übersicht(self,cur):
+
+    def kunden_übersicht(self, cur):
         self.frame.destroy()
-        cur.execute("""SELECT kunden.IDKunde,anrede.Anrede, Vorname, Name, Straße, Hausnummer, ort.Ort, Telefon, Geburtsdatum, Email, Titel
-FROM kunden INNER JOIN ort on ort.ID_Ort = kunden.OrtID
-INNER JOIN anrede on anrede.ID_Anrede = kunden.Anrede""")
+        self.frame = ttk.Frame(self.parent)
+        self.frame.pack(padx=10, pady=10)
+
+        # Überschrift
+        label_title = ttk.Label(self.frame, text="Kundenübersicht", font=("Arial", 14, "bold"))
+        label_title.pack(pady=5)
+
+        # Suchfeld für Nachnamen
+        such_frame = ttk.Frame(self.frame)
+        such_frame.pack(pady=5)
+
+        label_suche = ttk.Label(such_frame, text="Nachname:")
+        label_suche.pack(side=tk.LEFT)
+
+        entry_suche = ttk.Entry(such_frame)
+        entry_suche.pack(side=tk.LEFT, padx=5)
+
+        def daten_anzeigen(nachname_filter=None): # Optionaler Wert zum übergeben
+            # Textbox leeren
+            self.text_box.config(state=tk.NORMAL)
+            self.text_box.delete("1.0", tk.END)
+
+            if nachname_filter: # Wird ein Wert übergeben, dann soll nach dem nachname_filter gesucht werden
+                cur.execute("""
+                    SELECT kunden.IDKunde, anrede.Anrede, Vorname, Name, Straße, Hausnummer, ort.PLZ, ort.Ort, Telefon, Geburtsdatum, Email, Titel
+                    FROM kunden
+                    INNER JOIN ort ON ort.ID_Ort = kunden.OrtID
+                    INNER JOIN anrede ON anrede.ID_Anrede = kunden.Anrede
+                    WHERE Name LIKE ?
+                    GROUP BY IDKunde
+                """, (f"%{nachname_filter}%",))
+            else: # Wird kein Parameter übergeben, dann sollen alle Kunden aufgelistet werden
+                cur.execute("""
+                    SELECT kunden.IDKunde, anrede.Anrede, Vorname, Name, Straße, Hausnummer, ort.PLZ, ort.Ort, Telefon, Geburtsdatum, Email, Titel
+                    FROM kunden
+                    INNER JOIN ort ON ort.ID_Ort = kunden.OrtID
+                    INNER JOIN anrede ON anrede.ID_Anrede = kunden.Anrede
+                    GROUP BY IDKunde
+                """)
+
+            kunden = cur.fetchall() # Alle SQL Abfrage-Daten in die Variable speichern
+
+            if not kunden: # Überprüfung ob SQL-Abfrage ein Ergebnis liefert
+                self.text_box.insert(tk.END, "Keine Kunden gefunden.")
+            else:
+                for k in kunden:
+                    eintrag = (f"{k[11]} {k[1]} {k[2]} {k[3]}\n"
+                            f"{k[4]} {k[5]}, {k[6]} {k[7]}\n"
+                            f"Tel: {k[8]} | Geburtsdatum: {k[9]}\n"
+                            f"E-Mail: {k[10]}\n"
+                            f"{'-'*40}\n") # -- für Zeilenumbruch / Trennung
+                    self.text_box.insert(tk.END, eintrag) # in die Textbox einfügen
+
+            self.text_box.config(state=tk.DISABLED) # Textbox schreibgeschützt
+
+        def suche_ausführen():
+            nachname = entry_suche.get().strip()
+            daten_anzeigen(nachname)
+
+        button_suchen = ttk.Button(such_frame, text="Suchen", command=suche_ausführen)
+        button_suchen.pack(side=tk.LEFT, padx=5)
+
+        button_zurueck = ttk.Button(such_frame, text="Zurück", command=lambda: self.hauptmenu_admin(self.parent,cur))
+        button_zurueck.pack(side=tk.LEFT, padx=10)
+
+        # Scrollbare Textbox
+        text_frame = ttk.Frame(self.frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(text_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.text_box = tk.Text(text_frame, height=20, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+        self.text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar.config(command=self.text_box.yview) # Vertikale Ansicht
+
 
     def auftragseingang(self):
         self.frame.destroy()
@@ -258,7 +335,7 @@ INNER JOIN anrede on anrede.ID_Anrede = kunden.Anrede""")
                 rolle = row[0]
 
                 if rolle == "inhaber":
-                    menu.hauptmenu_admin(self.parent)
+                    menu.hauptmenu_admin(self.parent,cur)
 
                 elif rolle == "kunde":
                     menu.kunden_menu(self.parent,email,cur,conn)

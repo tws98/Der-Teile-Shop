@@ -41,6 +41,7 @@ FROM kunden INNER JOIN ort on ort.ID_Ort = kunden.OrtID
 INNER JOIN anrede on anrede.ID_Anrede = kunden.Anrede
 WHERE kunden.Vorname = ? AND kunden.Name = ? AND Straße = ? AND Hausnummer = ? AND PLZ = ? AND Ort = ?""",(vorname, name ,strasse, hausnummer, plz, ort))
             row = cur.fetchone()
+            # Eingegebene Daten überprüfen ob bereits vorhanden
 
             if row:
                 kunde.IDKunde = row[0]
@@ -117,7 +118,7 @@ WHERE kunden.Vorname = ? AND kunden.Name = ? AND Straße = ? AND Hausnummer = ? 
             messagebox.showerror("Fehler beim Speichern", f"Ein Fehler ist aufgetreten:\n{str(e)}")
     
     
-    # GUI erstellen
+    # Neue GUI erstellen
     root = tk.Tk()
     root.title("Kundenverwaltung")
 
@@ -127,12 +128,14 @@ WHERE kunden.Vorname = ? AND kunden.Name = ? AND Straße = ? AND Hausnummer = ? 
     daten = [kunde.anrede, kunde.vorname, kunde.name, kunde.strasse, kunde.hausnummer,
              kunde.ort, kunde.PLZ, kunde.telefon, kunde.geburtsdatum, kunde.email, kunde.titel]
 
+        # Erstellen der einzelnen entry-Felder
     for i, (label, wert) in enumerate(zip(labels, daten)):
         ttk.Label(root, text=label + ":").grid(row=i, column=0, padx=10, pady=5, sticky="e")
         entry = ttk.Entry(root)
         entry.grid(row=i, column=1, padx=10, pady=5)
         entry.insert(0, wert)
         eintraege.append(entry)
+
 
     # Einzelfelder den Variablen zuweisen
     (entry_anrede, entry_vorname, entry_name, entry_strasse, entry_hausnummer,
