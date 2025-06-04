@@ -58,7 +58,6 @@ class Datenbank ():
 
         if self.connected:
             self.frame.destroy()
-            print("Erfolgreich eingeloggt!")
             
 
 

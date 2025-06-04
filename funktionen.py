@@ -43,6 +43,7 @@ class Eingabe:
             widget.destroy()
 
     def registrierung_ui(self,parent, cur,conn):
+        parent.title("Benutzer Registrierung")
         # globaler Container
         self.frame = ttk.Frame(parent)
         self.frame.grid(row=0, column=0, padx=20, pady=20, sticky="n")
@@ -119,21 +120,32 @@ class Eingabe:
             (email, hashed.decode(), "kunde")
         )
             conn.commit()
-            messagebox.showinfo("Erfolg", "Registrierung erfolgreich!")
+            #messagebox.showinfo("Erfolg", "Registrierung erfolgreich!")
             #neu angelegte benutzer-id aus Datenbank holen um sie unten zu verknüpfen
-            cur.execute("SELECT benutzer.id FROM benutzer WHERE benutzer.benutzername = ?",(email,))#<-- Komma um ein Tuple zu übergeben
+            cur.execute("SELECT benutzer.id FROM benutzer WHERE benutzer.benutzername =" "?",(email,))#<-- Komma um ein Tuple zu übergeben
             row = cur.fetchone()
             idbenutzer = row[0]
             #überprüfung ob Kundendaten bereits angelegt sind:
-            cur.execute("SELECT kunden.Email FROM kunden WHERE kunden.Email = ?",(email,))
+            cur.execute("SELECT kunden.Email FROM kunden WHERE kunden.Email = ?", (email,))
             row = cur.fetchone()
-            mail = row[0]
+            if row:
+                mail = row[0]
+            else:
+                mail = None 
+
             if mail == email:
                 cur.execute("SELECT kunden.IDKunde FROM kunden WHERE kunden.Email = ?",(mail,))
                 row = cur.fetchone()
                 idkunde = row [0]
-                cur.execute(f"UPDATE `benutzer` SET `kunden_id` = '{idkunde}' WHERE `benutzer`.`id` = {idbenutzer};" )
+                cur.execute("UPDATE `benutzer` SET `kunden_id` = ? WHERE `benutzer`.`id` = ?",(idkunde,idbenutzer))
                 conn.commit()
+                messagebox.showinfo("Erfolg", "Registrierung erfolgreich.")
+
+            else:
+                messagebox.showwarning("Erfolg.", "Der Benutzer wurde erfolgreich registriert.\n Bitte tragen Sie Ihre Daten auf der Folgeseite ein.")
+                self.clear_window(self.parent)
+                menu = Eingabe(self.parent)
+                menu.kunden_menu(self.parent,email,cur,conn)
 
 
         
@@ -146,6 +158,7 @@ class Eingabe:
 
     def hauptmenu_admin (self,parent,cur,conn):
         #hauptmenü des Inhabers nach der Anmeldung
+        parent.title("Hauptmenü")
         self.frame.destroy()
         self.frame = ttk.Frame(parent)
         self.frame.grid(row=0,column=0,padx=20, pady=20, sticky="n")
@@ -160,6 +173,7 @@ class Eingabe:
 
     def kunden_menu(self, parent, email,cur,conn):
         #hauptmenü für Kunden
+        parent.title("Kundenmenü")
         self.frame = ttk.Frame(parent)
         self.frame.grid(row=0,column=0,padx=20, pady=20, sticky="n")
         ttk.Label(self.frame, text="Kundenmenü",font=("Arial", 12, "bold")).pack(pady=10)
@@ -184,7 +198,7 @@ WHERE kunden.Email = ?""",(email,))
                 "",  # PLZ
                 "",  # Telefon
                 "",  # Geburtsdatum
-                "",  # Email
+                email,  # Email
                 ""   # Titel
             )
         else:
@@ -196,8 +210,6 @@ WHERE kunden.Email = ?""",(email,))
         ttk.Button(self.frame, text="Ausloggen", command=lambda: self.logout(conn)).pack(pady=40, padx=20)
 
 
-    
-    # einzelne Funktionen für die Hauptmenü buttons
     # logout Funktion
     def logout(self,conn):
         self.clear_window(self.parent)
@@ -214,8 +226,10 @@ WHERE kunden.Email = ?""",(email,))
         datenbank.zeige_benutzer_login()
 
 
+    # Funktion für die Kundenübersicht
     def kunden_übersicht(self, cur,conn):
         self.frame.destroy()
+        self.parent.title("Kundenübersicht")
         self.frame = ttk.Frame(self.parent)
         self.frame.pack(padx=10, pady=10)
 
@@ -325,7 +339,6 @@ WHERE kunden.Email = ?""",(email,))
             passworthash = row[0] #<-- nötig damit der Tuple zu einem einzelnen String zum vergleichen wird
             if bcrypt.checkpw(pw.encode(), passworthash.encode()):
                 # überprüfung ob passwort gleich ist
-                print ("Passwort stimmt überein!")
                 passwort = True
 
             else:
@@ -333,11 +346,7 @@ WHERE kunden.Email = ?""",(email,))
                 print ("Passwort stimmt nicht überein!")
 
 
-            if benutzername:
-                print("Benutzername stimmt überein!")
-                # Check Reasons (nicht notwendig)
-
-            else:
+            if not benutzername:
                 messagebox.showerror("Fehler", "Benutzername nicht gefunden.")
 
             if passwort and benutzername:
@@ -355,10 +364,7 @@ WHERE kunden.Email = ?""",(email,))
 
                 elif rolle == "kunde":
                     menu.kunden_menu(self.parent,email,cur,conn)
-
-                #else:
-                #print("Fehler in der Datenbank. Bitte Datenbank überprüfen!")
-                    
+                 
 
 
         except Exception as e:
