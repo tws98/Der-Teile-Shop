@@ -1,6 +1,11 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+import customtkinter as ctk
+from tkinter import messagebox
 
+# Initialisieren des customtkinter-Themas
+ctk.set_appearance_mode("System")  # "Dark", "Light", "System"
+ctk.set_default_color_theme("blue")
+
+# Klasse um (vorhandene) Kundendaten zu speichern
 class Kunden:
     def __init__(self, IDKunde, anrede, vorname, name, strasse, hausnummer, ort, PLZ, telefon, geburtsdatum, email, titel):
         self.IDKunde = IDKunde
@@ -16,8 +21,7 @@ class Kunden:
         self.email = email
         self.titel = titel
 
-# Funktion zum Verwalten des Kunden
-
+# Eingegebene Daten in Variablen speichern
 def kunden_verwalten(kunde, cur, conn):
     def daten_pruefen():
         anrede = entry_anrede.get()
@@ -37,7 +41,6 @@ def kunden_verwalten(kunde, cur, conn):
             messagebox.showwarning("Hinweis", "Die E-Mail stimmt nicht überein.")
             return
 
-        
         cur.execute("""
             SELECT kunden.IDKunde FROM kunden
             INNER JOIN ort ON ort.ID_Ort = kunden.OrtID
@@ -54,7 +57,7 @@ def kunden_verwalten(kunde, cur, conn):
             kunde.IDKunde = None
             messagebox.showinfo("Keine Dublette", "Diese Kundendaten sind neu und können gespeichert werden.")
 
-    # Funktion zum speichern / aktualisieren der Kundendaten
+        # Neu eingegebene Daten speichern
     def speichern():
         kunde.anrede = entry_anrede.get()
         kunde.vorname = entry_vorname.get()
@@ -68,26 +71,26 @@ def kunden_verwalten(kunde, cur, conn):
         kunde.email = entry_email.get()
         kunde.titel = entry_titel.get()
 
-        # Ort und PLZ überprüfen ob, sie hinterlegt ist
         try:
+            # Ort und PLZ überprüfen ob, sie hinterlegt ist
             cur.execute("SELECT ID_Ort FROM ort WHERE Ort = ? AND PLZ = ?", (kunde.ort, kunde.PLZ))
             row = cur.fetchone()
             if row:
                 ortid = row[0]
-
+            
             else:
                 None
 
-        # Überprüfung ob richtige Anrede ausgewählt wurde
+            # Überprüfung ob richtige Anrede ausgewählt wurde
             cur.execute("SELECT ID_Anrede FROM anrede WHERE Anrede = ?", (kunde.anrede,))
             row = cur.fetchone()
-
             if row:
                 anredeid = row[0]
-
+            
             else:
                 None
 
+            # Messagebox falls IDs nicht übereinstimmen sollten
             if ortid is None or anredeid is None:
                 messagebox.showerror("Fehler", "Ungültige Anrede oder Ort/PLZ")
                 return
@@ -100,7 +103,6 @@ def kunden_verwalten(kunde, cur, conn):
                     WHERE IDKunde=?
                 """, (anredeid, kunde.vorname, kunde.name, kunde.strasse, kunde.hausnummer,
                        ortid, kunde.telefon, kunde.geburtsdatum, kunde.email, kunde.titel, kunde.IDKunde))
-                
             # Falls Kunde nicht hinterlegt ist, dann Insert SQL-Befehl um neue Daten anzulegen
             else:
                 cur.execute("""
@@ -114,12 +116,13 @@ def kunden_verwalten(kunde, cur, conn):
             # Kunden ID und Benutzer ID aus Datenbank holen um diese miteinander zu Verknüpfen
             cur.execute("SELECT kunden.IDKunde FROM kunden WHERE kunden.Email = ?", (kunde.email,))
             idkunde = cur.fetchone()[0]
+
             cur.execute("SELECT benutzer.id FROM benutzer WHERE benutzer.benutzername = ?", (kunde.email,))
             idbenutzer = cur.fetchone()[0]
 
             # Verknüpfung der ids in der Tabelle Benutzer
             if idkunde and idbenutzer:
-                cur.execute("UPDATE `benutzer` SET `kunden_id` = ? WHERE `benutzer`.`id` = ?", (idkunde, idbenutzer))
+                cur.execute("UPDATE benutzer SET kunden_id = ? WHERE id = ?", (idkunde, idbenutzer))
                 conn.commit()
                 messagebox.showinfo("Erfolg", "Änderungen wurden erfolgreich gespeichert.")
                 root.destroy()
@@ -130,8 +133,8 @@ def kunden_verwalten(kunde, cur, conn):
             messagebox.showerror("Fehler beim Speichern", f"Ein Fehler ist aufgetreten:\n{str(e)}")
             conn.rollback()
 
-    # Neues Root Fenster für die Kundendaten
-    root = tk.Tk()
+     # Neues Root Fenster für die Kundendaten
+    root = ctk.CTkToplevel()
     root.title("Kundendaten verwalten")
 
     labels = ["Anrede", "Vorname", "Nachname", "Straße", "Hausnummer", "Ort", "PLZ",
@@ -143,15 +146,15 @@ def kunden_verwalten(kunde, cur, conn):
 
     # Einzelne Entrys und Labels erstellen
     for i, (label, wert) in enumerate(zip(labels, daten)):
-        ttk.Label(root, text=label + ":").grid(row=i, column=0, padx=10, pady=5, sticky="e")
+        ctk.CTkLabel(root, text=label + ":").grid(row=i, column=0, padx=10, pady=5, sticky="e")
 
-        entry = ttk.Entry(root)
+        entry = ctk.CTkEntry(root)
         entry.grid(row=i, column=1, padx=10, pady=5)
         entry.insert(0, wert)
 
         # Email Label/Entry auf 'readonly' setzen um, Redundanz zu vermeiden
         if label == "E-Mail":
-            entry.config(state="readonly")
+            entry.configure(state="readonly")
 
         # Falls Daten bereits vorhanden, werden sie hierdurch direkt angezeigt
         eintraege.append(entry)
@@ -159,16 +162,16 @@ def kunden_verwalten(kunde, cur, conn):
     (entry_anrede, entry_vorname, entry_name, entry_strasse, entry_hausnummer,
      entry_ort, entry_plz, entry_telefon, entry_geburtsdatum, entry_email, entry_titel) = eintraege
 
-    # Button 'Daten prüfen' nur anzeigen, wenn kein Kunde hinterlegt ist
+     # Button 'Daten prüfen' nur anzeigen, wenn kein Kunde hinterlegt ist
     if not kunde.IDKunde:
-        ttk.Button(root, text="Daten prüfen", command=daten_pruefen).grid(row=11, column=0, columnspan=2, pady=5)
+        ctk.CTkButton(root, text="Daten prüfen", command=daten_pruefen).grid(row=11, column=0, columnspan=2, pady=5)
 
     # Speichern Button
-    ttk.Button(root, text="Änderungen speichern", command=speichern).grid(row=12, column=0, columnspan=2, pady=10)
+    ctk.CTkButton(root, text="Änderungen speichern", command=speichern).grid(row=12, column=0, columnspan=2, pady=10)
 
     # Änderungen/Ergebnisse unten anzeigen
-    label_result = ttk.Label(root, text=f"{kunde.titel} {kunde.anrede} {kunde.vorname} {kunde.name}\n"
-                                        f"{kunde.strasse} {kunde.hausnummer}, {kunde.PLZ} {kunde.ort}\n"
-                                        f"Tel: {kunde.telefon}, Geburtsdatum: {kunde.geburtsdatum}\n"
-                                        f"E-Mail: {kunde.email}")
+    label_result = ctk.CTkLabel(root, text=f"{kunde.titel} {kunde.anrede} {kunde.vorname} {kunde.name}\n"
+                                           f"{kunde.strasse} {kunde.hausnummer}, {kunde.PLZ} {kunde.ort}\n"
+                                           f"Tel: {kunde.telefon}, Geburtsdatum: {kunde.geburtsdatum}\n"
+                                           f"E-Mail: {kunde.email}", justify="left")
     label_result.grid(row=13, column=0, columnspan=2, pady=20)
