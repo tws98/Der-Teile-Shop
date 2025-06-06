@@ -1,11 +1,10 @@
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import messagebox, PhotoImage
+from tkinter import messagebox
 import funktionen
 import mariadb
 import sys
 import os
-import PIL
 from PIL import Image, ImageTk
 
 # CustomTkinter Style Setup
@@ -36,8 +35,6 @@ class Datenbank():
         self.benutzername = ""
         self.passwort = ""
             
-
-    #relativer_pfad = os.path.join(os.path.dirname(__file__), "Logo.png")
     # Logo aufrufen
 
     
