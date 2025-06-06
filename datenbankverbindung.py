@@ -5,6 +5,7 @@ from PIL import Image
 import funktionen
 import mariadb
 import sys
+import os
 
 # CustomTkinter Style Setup
 ctk.set_appearance_mode("system")
@@ -38,20 +39,21 @@ class Datenbank():
   # Logo aufrufen
 
     def zeige_logo(self):
-            try:
-                img_path = "C:\\Users\\tobia\\Desktop\\Unterlagen\\Miniprojekt\\Python\\Logo.png"
-                pil_image = Image.open(img_path)
-                pil_image = pil_image.resize((200, 190), Image.LANCZOS)
-                ctk_image = CTkImage(pil_image,size=(250,180))
-                
-                # Label für das Bild
-                image_label = ctk.CTkLabel(self.right_frame, image=ctk_image, text="")
-                image_label.image = ctk_image
-                image_label.pack(pady=20)
+        try:
+            # Relativer Pfad zum aktuellen Verzeichnis
+            img_path = os.path.join(os.path.dirname(__file__), "Logo.png")
+            pil_image = Image.open(img_path)
+            pil_image = pil_image.resize((200, 190), Image.LANCZOS)
+            ctk_image = CTkImage(pil_image, size=(250, 180))
 
-            except Exception as e:
-                ctk.CTkLabel(self.right_frame, text="Bild konnte nicht geladen werden.").pack(pady=20)
-                print(f"Logo konnte nicht geladen werden: {e}")
+            image_label = ctk.CTkLabel(self.right_frame, image=ctk_image, text="")
+            image_label.image = ctk_image
+            image_label.pack(pady=20)
+
+        except Exception as e:
+            ctk.CTkLabel(self.right_frame, text="Bild konnte nicht geladen werden.").pack(pady=20)
+            print(f"Logo konnte nicht geladen werden: {e}")
+
 
     # Funktion für die Verbindung zur Datenbank
     def datenbankverbindung(self):
