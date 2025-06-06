@@ -1,11 +1,12 @@
 import customtkinter as ctk
-from tkinter import messagebox
-from customtkinter import CTkImage
-from PIL import Image
+import tkinter as tk
+from tkinter import messagebox, PhotoImage
 import funktionen
 import mariadb
 import sys
 import os
+import PIL
+from PIL import Image, ImageTk
 
 # CustomTkinter Style Setup
 ctk.set_appearance_mode("system")
@@ -36,23 +37,31 @@ class Datenbank():
         self.passwort = ""
             
 
-  # Logo aufrufen
+    #relativer_pfad = os.path.join(os.path.dirname(__file__), "Logo.png")
+    # Logo aufrufen
 
+    
     def zeige_logo(self):
         try:
-            # Relativer Pfad zum aktuellen Verzeichnis
-            img_path = os.path.join(os.path.dirname(__file__), "Logo.png")
-            pil_image = Image.open(img_path)
-            pil_image = pil_image.resize((200, 190), Image.LANCZOS)
-            ctk_image = CTkImage(pil_image, size=(250, 180))
+            img_path = get_resource_path("Logo.png")
+            if not os.path.isfile(img_path):
+                raise FileNotFoundError("Logo-Datei nicht gefunden.")
 
-            image_label = ctk.CTkLabel(self.right_frame, image=ctk_image, text="")
-            image_label.image = ctk_image
-            image_label.pack(pady=20)
+            # Zielgröße des Bildes (muss zur Framegröße passen)
+            target_width = 200
+            target_height = 190
+
+            # Bild laden und skalieren
+            original_image = Image.open(img_path)
+            resized_image = original_image.resize((target_width, target_height), Image.LANCZOS)
+            logo_img = ImageTk.PhotoImage(resized_image)
+
+            image_label = ctk.CTkLabel(self.right_frame, image=logo_img, text="")
+            image_label.image = logo_img
+            image_label.place(relx=0, rely=0, relwidth=1, relheight=1)
 
         except Exception as e:
-            ctk.CTkLabel(self.right_frame, text="Bild konnte nicht geladen werden.").pack(pady=20)
-            print(f"Logo konnte nicht geladen werden: {e}")
+            messagebox.showerror("Fehler", f"Fehler beim Laden des Logos:\n{e}")
 
 
     # Funktion für die Verbindung zur Datenbank
@@ -155,3 +164,8 @@ class Datenbank():
             print(f"Fehler bei Verbindung: {e}")
             sys.exit(1)
 
+def get_resource_path(relativer_pfad):
+        """Funktioniert sowohl im Entwicklermodus als auch in PyInstaller-Exe"""
+        if hasattr(sys, "_MEIPASS"):
+            return os.path.join(sys._MEIPASS, relativer_pfad)
+        return os.path.join(os.path.abspath("."), relativer_pfad)
